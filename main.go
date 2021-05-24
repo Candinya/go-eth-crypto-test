@@ -69,16 +69,27 @@ func main() {
 
 	signature, _ := crypto.Sign(msgHash.Bytes(), &pvk)
 
+	// @IMPORTANT: Please forgive my rude offence, but the eccentric
+	//`eth-crypto` changes the last byte and add 27 (0x1b).
+	// We have to change our results, then.
+
+	signature[len(signature) - 1] += 0x1b
+
 	fmt.Println("Your message signature (without 0x prefix): ")
 	fmt.Println(hex.EncodeToString(signature))
 	fmt.Println()
 
 	//   e1c90fc6c45ffddfb81d013434afda8a9ce5341d61ad92897e648c915359653b3a9cfae364fe8314db3a12abbc8fabe17bc503753012b0f1b7e224f142c25ebc00
 	// 0xe1c90fc6c45ffddfb81d013434afda8a9ce5341d61ad92897e648c915359653b3a9cfae364fe8314db3a12abbc8fabe17bc503753012b0f1b7e224f142c25ebc1b
+	// The last byte should plus 0x1b (27)
+	// Refers to https://github.com/pubkey/eth-crypto/blob/master/src/sign.js#L26
 
-	recoveredPub, _ := crypto.SigToPub(msgHash.Bytes(), signature)
+	signatureReceived := signature[:]
 
-	recoveredPubBytes := elliptic.Marshal(secp256k1.S256(), recoveredPub.X, recoveredPub.Y)
+	signatureReceived[len(signatureReceived) - 1] -= 0x1b
+
+	recoveredPubBytes, _ := crypto.Ecrecover(msgHash.Bytes(), signatureReceived)
+	recoveredPub, _ := crypto.UnmarshalPubkey(recoveredPubBytes)
 
 	fmt.Println("Your recovered public key (with 04 prefix): ")
 	fmt.Println(hex.EncodeToString(recoveredPubBytes))
